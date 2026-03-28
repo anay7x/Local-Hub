@@ -103,6 +103,42 @@ export const adminAPI = {
   toggleUserStatus: (id, data) => api.put(`/admin/users/${id}/status`, data),
   getSalesReport: (params) => api.get('/admin/sales-report', { params }),
   getTopSellers: () => api.get('/admin/top-sellers'),
+
+  // Admin Products
+  getAllAdminProducts: (params) => api.get('/admin/products', { params }),
+  createAdminProduct: (data) => {
+    const formData = new FormData();
+    Object.keys(data).forEach(key => {
+      if (key === 'image' && data[key]) {
+        formData.append('image', data[key]);
+      } else {
+        formData.append(key, data[key]);
+      }
+    });
+    return api.post('/admin/products', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+  updateAdminProduct: (id, data) => {
+    const formData = new FormData();
+    Object.keys(data).forEach(key => {
+      if (key === 'image' && data[key]) {
+        formData.append('image', data[key]);
+      } else {
+        formData.append(key, data[key]);
+      }
+    });
+    return api.put(`/admin/products/${id}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+  deleteAdminProduct: (id) => api.delete(`/admin/products/${id}`),
+
 };
+
 
 export default api;

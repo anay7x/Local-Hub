@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FiShoppingCart, FiMenu, FiX, FiLogOut, FiUser } from 'react-icons/fi';
+import { FiShoppingCart, FiMenu, FiX, FiLogOut, FiUser, FiShoppingBag } from 'react-icons/fi';
 import { AiOutlineHome } from 'react-icons/ai';
 import { useAuthStore, useCartStore } from '../store';
 
@@ -137,7 +137,7 @@ const Header = () => {
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="md:hidden p-2 text-slate-300 hover:text-cyan-400"
             >
-              {isMenuOpen ? <FiX size={24} /> : <FiMenu size={24} />}
+{isMenuOpen ? <FiX size={24} /> : <FiMenu size={24} />}
             </motion.button>
           </div>
         </div>
@@ -226,3 +226,4 @@ const Header = () => {
 };
 
 export default Header;
+

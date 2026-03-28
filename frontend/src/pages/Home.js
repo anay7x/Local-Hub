@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../store';
 import { motion } from 'framer-motion';
 import { FiArrowRight, FiTrendingUp, FiUsers, FiPackage } from 'react-icons/fi';
 import Layout from '../components/Layout';
 import { useProductStore } from '../store';
 
 const Home = () => {
-  const { products, fetchProducts } = useProductStore();
+const { products, fetchProducts } = useProductStore();
+  const { user } = useAuthStore();
+  const navigate = useNavigate();
   const [localProducts, setLocalProducts] = useState([]);
 
   useEffect(() => {
@@ -94,7 +97,12 @@ const Home = () => {
                   Start Shopping
                   <FiArrowRight size={20} />
                 </Link>
-                <button className="btn-secondary">Become a Vendor</button>
+<button 
+  className="btn-secondary" 
+  onClick={() => user ? navigate('/seller/dashboard') : navigate('/login')}
+>
+  Become a Vendor
+</button>
               </motion.div>
             </motion.div>
 

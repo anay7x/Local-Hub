@@ -254,3 +254,167 @@ exports.getTopSellers = async (req, res, next) => {
     });
   }
 };
+
+// Get All Products for Admin
+exports.getAllProductsAdmin = async (req, res, next) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only admin can access this',
+      });
+    }
+
+    const { sellerId, category, search, page = 1, limit = 10 } = req.query;
+
+    let query = {};
+
+    if (sellerId) {
+      query.seller = sellerId;
+    }
+
+    if (category) {
+      query.category = category;
+    }
+
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    const skip = (page - 1) * limit;
+
+    const products = await Product.find(query)
+      .populate('seller', 'shopName')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await Product.countDocuments(query);
+
+    res.status(200).json({
+      success: true,
+      products,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        pages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// Create Product as Admin
+exports.createProductAdmin = async (req, res, next) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only admin can access this',
+      });
+    }
+
+    const { name, description, price, originalPrice, discount, category, stock, seller, specifications } = req.body;
+
+    const product = await Product.create({
+      name,
+      description,
+      price: parseFloat(price),
+      originalPrice: originalPrice ? parseFloat(originalPrice) : undefined,
+      discount: discount ? parseInt(discount) : 0,
+      category,
+      stock: parseInt(stock),
+      seller,
+      specifications: specifications ? JSON.parse(specifications) : {},
+      isFeatured: true, // Admin added are featured by default
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Product created successfully',
+      product,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// Update Product as Admin
+exports.updateProductAdmin = async (req, res, next) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only admin can access this',
+      });
+    }
+
+    const { id } = req.params;
+    const updateData = req.body;
+
+    const product = await Product.findByIdAndUpdate(id, updateData, { new: true, runValidators: true });
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Product updated successfully',
+      product,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// Delete Product as Admin
+exports.deleteProductAdmin = async (req, res, next) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only admin can access this',
+      });
+    }
+
+    const { id } = req.params;
+
+    const product = await Product.findByIdAndDelete(id);
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Product deleted successfully',
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+

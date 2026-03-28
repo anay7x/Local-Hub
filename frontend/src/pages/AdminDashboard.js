@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FiUsers, FiCheck, FiX, FiDollarSign, FiPackage } from 'react-icons/fi';
+import { FiUsers, FiCheck, FiX, FiDollarSign, FiPackage, FiEdit3, FiTrash2 } from 'react-icons/fi';
+
 import Layout from '../components/Layout';
 import { useAuthStore } from '../store';
 import { adminAPI } from '../services/api';
@@ -15,7 +16,21 @@ const AdminDashboard = () => {
   const [stats, setStats] = useState({});
   const [users, setUsers] = useState([]);
   const [sellers, setSellers] = useState([]);
+  const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [productLoading, setProductLoading] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [newProduct, setNewProduct] = useState({
+    name: '',
+    description: '',
+    price: '',
+    category: '',
+    stock: '',
+    seller: '',
+    isFeatured: false,
+  });
 
   useEffect(() => {
     if (!user || user.role !== 'admin') {
@@ -24,6 +39,7 @@ const AdminDashboard = () => {
     }
     fetchData();
   }, [user, navigate]);
+
 
   const fetchData = async () => {
     try {
@@ -43,6 +59,65 @@ const AdminDashboard = () => {
       setLoading(false);
     }
   };
+
+  const fetchProducts = async () => {
+    try {
+      setProductLoading(true);
+      const res = await adminAPI.getAllAdminProducts({});
+      setProducts(res.data.products);
+    } catch (error) {
+      toast.error('Failed to load products');
+    } finally {
+      setProductLoading(false);
+    }
+  };
+
+  const handleCreateProduct = async (e) => {
+    e.preventDefault();
+    try {
+      await adminAPI.createAdminProduct(newProduct);
+      toast.success('Product created');
+      setShowCreateModal(false);
+      setNewProduct({
+        name: '',
+        description: '',
+        price: '',
+        category: '',
+        stock: '',
+        seller: '',
+        isFeatured: false,
+      });
+      fetchProducts();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to create product');
+    }
+  };
+
+  const handleEditProduct = async (e) => {
+    e.preventDefault();
+    try {
+      await adminAPI.updateAdminProduct(editingProduct._id, editingProduct);
+      toast.success('Product updated');
+      setShowEditModal(false);
+      setEditingProduct(null);
+      fetchProducts();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to update product');
+    }
+  };
+
+  const handleDeleteProduct = async (id) => {
+    if (!window.confirm('Delete this product?')) return;
+    try {
+      await adminAPI.deleteAdminProduct(id);
+      toast.success('Product deleted');
+      fetchProducts();
+    } catch (error) {
+      toast.error('Failed to delete product');
+    }
+  };
+
+
 
   const handleApproveSeller = async (userId) => {
     try {
@@ -115,10 +190,14 @@ const AdminDashboard = () => {
               { id: 'stats', label: 'Dashboard' },
               { id: 'users', label: 'Users Management' },
               { id: 'sellers', label: 'Top Sellers' },
+              { id: 'products', label: 'Products (Admin)' },
             ].map((tab) => (
               <motion.button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  if (tab.id === 'products') fetchProducts();
+                }}
                 className={`px-6 py-4 font-semibold transition-all duration-300 border-b-2 whitespace-nowrap ${
                   activeTab === tab.id
                     ? 'border-cyan-500 text-cyan-400'
@@ -128,6 +207,7 @@ const AdminDashboard = () => {
                 {tab.label}
               </motion.button>
             ))}
+
           </motion.div>
 
           {/* Stats Tab */}
@@ -309,7 +389,7 @@ const AdminDashboard = () => {
           )}
 
           {/* Top Sellers Tab */}
-          {activeTab === 'sellers' && (
+{activeTab === 'sellers' && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -365,6 +445,267 @@ const AdminDashboard = () => {
               )}
             </motion.div>
           )}
+
+          {/* Products Tab */}
+          {activeTab === 'products' && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-white">Manage Products</h2>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  onClick={() => setShowCreateModal(true)}
+                  className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-lg hover:from-cyan-600 hover:to-blue-700 transition-all"
+                >
+                  + Add New Product
+                </motion.button>
+              </div>
+
+              <div className="card-glass p-8">
+                {productLoading ? (
+                  <p className="text-slate-400 text-center">Loading products...</p>
+                ) : products.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="border-b border-slate-700">
+                        <tr className="text-slate-400 text-sm">
+                          <th className="text-left py-3 px-4">Image</th>
+                          <th className="text-left py-3 px-4">Name</th>
+                          <th className="text-left py-3 px-4">Price</th>
+                          <th className="text-left py-3 px-4">Stock</th>
+                          <th className="text-left py-3 px-4">Seller</th>
+                          <th className="text-left py-3 px-4">Featured</th>
+                          <th className="text-left py-3 px-4">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {products.map((product) => (
+                          <motion.tr
+                            key={product._id}
+                            whileHover={{ backgroundColor: 'rgba(30, 41, 59, 0.5)' }}
+                            className="border-b border-slate-700 transition-colors"
+                          >
+                            <td className="py-4 px-4">
+                              <img src={product.images[0]?.url || '/placeholder.jpg'} alt={product.name} className="w-12 h-12 object-cover rounded" />
+                            </td>
+                            <td className="py-4 px-4 text-white font-medium max-w-xs truncate">{product.name}</td>
+                            <td className="py-4 px-4 text-green-400 font-bold">₹{product.price.toLocaleString()}</td>
+                            <td className="py-4 px-4">
+                              <span className={`badge ${product.stock > 0 ? 'badge-success' : 'badge-danger'}`}>
+                                {product.stock}
+                              </span>
+                            </td>
+                            <td className="py-4 px-4 text-slate-400">{product.seller?.name || 'N/A'}</td>
+                            <td className="py-4 px-4">
+                              <span className={`badge ${product.isFeatured ? 'badge-warning' : 'badge-secondary'}`}>
+                                {product.isFeatured ? 'Yes' : 'No'}
+                              </span>
+                            </td>
+                            <td className="py-4 px-4">
+                              <div className="flex gap-2">
+                                <motion.button
+                                  whileHover={{ scale: 1.1 }}
+                                  onClick={() => {
+                                    setEditingProduct(product);
+                                    setShowEditModal(true);
+                                  }}
+                                  className="p-2 bg-blue-500/20 text-blue-400 rounded hover:bg-blue-500/40"
+                                  title="Edit"
+                                >
+                                  <FiEdit3 size={16} />
+                                </motion.button>
+                                <motion.button
+                                  whileHover={{ scale: 1.1 }}
+                                  onClick={() => handleDeleteProduct(product._id)}
+                                  className="p-2 bg-red-500/20 text-red-400 rounded hover:bg-red-500/40"
+                                  title="Delete"
+                                >
+                                  <FiTrash2 size={16} />
+                                </motion.button>
+                              </div>
+                            </td>
+                          </motion.tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-slate-400 text-center py-12">No products found. Add your first product!</p>
+                )}
+              </div>
+
+              {/* Create Modal */}
+              {showCreateModal && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+                  onClick={() => setShowCreateModal(false)}
+                >
+                  <motion.div
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    className="bg-slate-800 rounded-xl p-8 max-w-md w-full max-h-[90vh] overflow-y-auto"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <h3 className="text-2xl font-bold text-white mb-6">Add New Product</h3>
+                    <form onSubmit={handleCreateProduct} className="space-y-4">
+                      <div>
+                        <label className="block text-slate-400 mb-2">Name</label>
+                        <input
+                          type="text"
+                          value={newProduct.name}
+                          onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
+                          className="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-cyan-500 focus:outline-none"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-slate-400 mb-2">Price (₹)</label>
+                        <input
+                          type="number"
+                          value={newProduct.price}
+                          onChange={(e) => setNewProduct({...newProduct, price: Number(e.target.value)})}
+                          className="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-cyan-500 focus:outline-none"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-slate-400 mb-2">Category</label>
+                        <select
+                          value={newProduct.category}
+                          onChange={(e) => setNewProduct({...newProduct, category: e.target.value})}
+                          className="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-cyan-500 focus:outline-none"
+                          required
+                        >
+                          <option value="">Select Category</option>
+                          <option value="Electronics">Electronics</option>
+                          <option value="Footwear">Footwear</option>
+                          <option value="Medicine">Medicine</option>
+                          <option value="Wedding Cards">Wedding Cards</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-slate-400 mb-2">Stock</label>
+                        <input
+                          type="number"
+                          value={newProduct.stock}
+                          onChange={(e) => setNewProduct({...newProduct, stock: Number(e.target.value)})}
+                          className="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-cyan-500 focus:outline-none"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-slate-400 mb-2">Seller ID</label>
+                        <input
+                          type="text"
+                          value={newProduct.seller}
+                          onChange={(e) => setNewProduct({...newProduct, seller: e.target.value})}
+                          className="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-cyan-500 focus:outline-none"
+                          placeholder="User ID from users list"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-slate-400 mb-2">Image</label>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => setNewProduct({...newProduct, image: e.target.files[0]})}
+                          className="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-cyan-500 focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-gradient-to-r file:from-cyan-500 file:to-blue-600 file:text-white hover:file:from-cyan-600 hover:file:to-blue-700"
+                        />
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="isFeatured"
+                          checked={newProduct.isFeatured}
+                          onChange={(e) => setNewProduct({...newProduct, isFeatured: e.target.checked})}
+                          className="rounded"
+                        />
+                        <label htmlFor="isFeatured" className="text-slate-400">Featured on Home</label>
+                      </div>
+                      <div className="flex gap-3 pt-4">
+                        <motion.button
+                          type="submit"
+                          whileHover={{ scale: 1.05 }}
+                          className="flex-1 px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-lg hover:from-cyan-600 hover:to-blue-700 transition-all font-semibold"
+                        >
+                          Create Product
+                        </motion.button>
+                        <motion.button
+                          type="button"
+                          onClick={() => setShowCreateModal(false)}
+                          whileHover={{ scale: 1.05 }}
+                          className="flex-1 px-6 py-3 bg-slate-700 text-slate-400 rounded-lg hover:bg-slate-600 transition-all"
+                        >
+                          Cancel
+                        </motion.button>
+                      </div>
+                    </form>
+                  </motion.div>
+                </motion.div>
+              )}
+
+              {/* Edit Modal */}
+              {showEditModal && editingProduct && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+                  onClick={() => setShowEditModal(false)}
+                >
+                  <motion.div
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    className="bg-slate-800 rounded-xl p-8 max-w-md w-full max-h-[90vh] overflow-y-auto"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <h3 className="text-2xl font-bold text-white mb-6">Edit Product</h3>
+                    <form onSubmit={handleEditProduct} className="space-y-4">
+                      <div>
+                        <label className="block text-slate-400 mb-2">Name</label>
+                        <input
+                          type="text"
+                          value={editingProduct.name}
+                          onChange={(e) => setEditingProduct({...editingProduct, name: e.target.value})}
+                          className="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-cyan-500 focus:outline-none"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-slate-400 mb-2">Price (₹)</label>
+                        <input
+                          type="number"
+                          value={editingProduct.price}
+                          onChange={(e) => setEditingProduct({...editingProduct, price: Number(e.target.value)})}
+                          className="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-cyan-500 focus:outline-none"
+                          required
+                        />
+                      </div>
+                      {/* Similar fields for other properties */}
+                      <div className="flex gap-3 pt-4">
+                        <motion.button
+                          type="submit"
+                          whileHover={{ scale: 1.05 }}
+                          className="flex-1 px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-lg hover:from-cyan-600 hover:to-blue-700 transition-all font-semibold"
+                        >
+                          Update Product
+                        </motion.button>
+                        <motion.button
+                          type="button"
+                          onClick={() => setShowEditModal(false)}
+                          whileHover={{ scale: 1.05 }}
+                          className="flex-1 px-6 py-3 bg-slate-700 text-slate-400 rounded-lg hover:bg-slate-600 transition-all"
+                        >
+                          Cancel
+                        </motion.button>
+                      </div>
+                    </form>
+                  </motion.div>
+                </motion.div>
+              )}
+            </motion.div>
+          )}
         </div>
       </div>
     </Layout>
@@ -372,3 +713,4 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
+
