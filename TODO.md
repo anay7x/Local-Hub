@@ -1,12 +1,15 @@
-# Become a Vendor Button Implementation
+# E-commerce Project - GitHub Upload Preparation
 
-✅ **Complete**
+✅ **Dependencies Installed**
+- Frontend: `npm install` completed
+- Backend: Installing...
 
-**Changes:**
-- Edited `frontend/src/pages/Home.js`: Added `useAuthStore`, `useNavigate`
-- Button logic: Logged in → `/seller/dashboard`, Logged out → `/login`
-- Hot reload - live now!
+✅ **Frontend Build**
+- `npm run build` in progress
 
-**Test:**
-- http://localhost:3000 → Click Become Vendor
+**Next Steps:**
+- [ ] Create GitHub repository (if not exists)
+- [ ] Check GitHub CLI (`gh --version`)
+- [ ] `git add . && git commit -m "Complete ecom project"`
+- [ ] `gh repo create` or `git push`
 
